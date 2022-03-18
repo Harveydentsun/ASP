@@ -18,7 +18,7 @@ def basket_check_args(spot, vol, corr_m, weights):
     return None
     
 def basket_price_mc_cv(
-    strike, spot, vol, weights, texp, cor_m, 
+    strike, spot, vol, weights, texp, cor_m,
     intr=0.0, divr=0.0, cp=1, n_samples=10000
 ):
     # price1 = MC based on BSM
@@ -26,32 +26,34 @@ def basket_price_mc_cv(
     price1 = basket_price_mc(
         strike, spot, vol, weights, texp, cor_m,
         intr, divr, cp, True, n_samples)
-    
-    ''' 
+
+    '''
     compute price2: mc price based on normal model
     make sure you use the same seed
 
     # Restore the state in order to generate the same state
-    np.random.set_state(rand_st)  
+    np.random.set_state(rand_st)
     price2 = basket_price_mc(
         strike, spot, spot*vol, weights, texp, cor_m,
         intr, divr, cp, False, n_samples)
     '''
+    np.random.set_state(rand_st)
     price2 = basket_price_mc(
         strike, spot, spot*vol, weights, texp, cor_m,
         intr, divr, cp, False, n_samples)
 
-    ''' 
+    '''
     compute price3: analytic price based on normal model
-    
+
     price3 = basket_price_norm_analytic(
         strike, spot, vol, weights, texp, cor_m, intr, divr, cp)
     '''
     price3 = basket_price_norm_analytic(
-        strike, spot, spot*vol, weights, texp, cor_m, intr, divr, cp)
-    
+        strike, spot, vol * spot, weights, texp, cor_m, intr, divr, cp)
+
     # return two prices: without and with CV
     return np.array([price1, price1 - (price2 - price3)])
+
 
 
 def basket_price_mc(
@@ -74,7 +76,7 @@ def basket_price_mc(
         '''
         PUT the simulation of the geometric brownian motion below
         '''
-        prices = forward[:,None] * np.exp(-0.5 * texp * np.diag(cov_m)[:,None] + np.sqrt(texp) * chol_m @ znorm_m)
+        prices = forward[:,None] * np.exp(-0.5 * texp * np.diagonal(cov_m)[:,None] + np.sqrt(texp) * chol_m @ znorm_m)
     else:
         # bsm = False: normal model
         prices = forward[:,None] + np.sqrt(texp) * chol_m @ znorm_m
@@ -86,20 +88,20 @@ def basket_price_mc(
 
 
 def basket_price_norm_analytic(
-    strike, spot, vol, weights, 
+    strike, spot, vol, weights,
     texp, cor_m, intr=0.0, divr=0.0, cp=1
 ):
-    
+
     '''
     The analytic (exact) option price under the normal model
-    
+
     1. compute the forward of the basket
     2. compute the normal volatility of basket
     3. plug in the forward and volatility to the normal price formula
-    
+
     norm = pf.Norm(sigma, intr=intr, divr=divr)
     norm.price(strike, spot, texp, cp=cp)
-    
+
     PUT YOUR CODE BELOW
     '''
     basket_check_args(spot, vol, cor_m, weights)
@@ -107,10 +109,13 @@ def basket_price_norm_analytic(
     div_fac = np.exp(-texp*divr)
     disc_fac = np.exp(-texp*intr)
     forward = spot / disc_fac * div_fac
-    forward_basket_norm = forward @ weights
-    vol_basket_norm = np.sqrt((vol * weights) @ cor_m @ (weights * vol))
+    forward_basket_norm = weights @ forward
+    cov_m = vol[None,:] * cor_m * vol[:,None]
+    vol_basket_norm = np.sqrt(weights @ cov_m @ weights)
+    vol_std = vol_basket_norm * np.sqrt(texp)
 
-    dn = (forward_basket_norm - strike) / vol_basket_norm / np.sqrt(texp)
-    norm_price = cp * disc_fac * (forward_basket_norm - strike) * ss.norm.cdf(cp*dn) + vol_basket_norm * np.sqrt(texp) * ss.norm.pdf(dn)
-    
+    dn = (forward_basket_norm - strike) / vol_std
+    norm_price = cp * disc_fac * (forward_basket_norm - strike) * ss.norm.cdf(cp*dn) + \
+                 disc_fac * vol_std * ss.norm.pdf(dn)
+
     return norm_price
