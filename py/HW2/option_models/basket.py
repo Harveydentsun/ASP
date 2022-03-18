@@ -37,7 +37,9 @@ def basket_price_mc_cv(
         strike, spot, spot*vol, weights, texp, cor_m,
         intr, divr, cp, False, n_samples)
     '''
-    price2 = 0
+    price2 = basket_price_mc(
+        strike, spot, spot*vol, weights, texp, cor_m,
+        intr, divr, cp, False, n_samples)
 
     ''' 
     compute price3: analytic price based on normal model
@@ -45,7 +47,8 @@ def basket_price_mc_cv(
     price3 = basket_price_norm_analytic(
         strike, spot, vol, weights, texp, cor_m, intr, divr, cp)
     '''
-    price3 = 0
+    price3 = basket_price_norm_analytic(
+        strike, spot, spot*vol, weights, texp, cor_m, intr, divr, cp)
     
     # return two prices: without and with CV
     return np.array([price1, price1 - (price2 - price3)])
@@ -71,7 +74,7 @@ def basket_price_mc(
         '''
         PUT the simulation of the geometric brownian motion below
         '''
-        prices = np.zeros_like(znorm_m)
+        prices = forward[:,None] * np.exp(-0.5 * texp * np.diag(cov_m)[:,None] + np.sqrt(texp) * chol_m @ znorm_m)
     else:
         # bsm = False: normal model
         prices = forward[:,None] + np.sqrt(texp) * chol_m @ znorm_m
@@ -99,7 +102,15 @@ def basket_price_norm_analytic(
     
     PUT YOUR CODE BELOW
     '''
+    basket_check_args(spot, vol, cor_m, weights)
+
+    div_fac = np.exp(-texp*divr)
+    disc_fac = np.exp(-texp*intr)
+    forward = spot / disc_fac * div_fac
+    forward_basket_norm = forward @ weights
+    vol_basket_norm = np.sqrt((vol * weights) @ cor_m @ (weights * vol))
+
+    dn = (forward_basket_norm - strike) / vol_basket_norm / np.sqrt(texp)
+    norm_price = cp * disc_fac * (forward_basket_norm - strike) * ss.norm.cdf(cp*dn) + vol_basket_norm * np.sqrt(texp) * ss.norm.pdf(dn)
     
-    
-    
-    return 0.0
+    return norm_price
