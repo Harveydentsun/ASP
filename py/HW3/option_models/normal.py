@@ -43,19 +43,37 @@ class Model:
         ''' 
         <-- PUT your implementation here
         '''
-        return 0
+        div_fac = np.exp(-texp * self.divr)
+        disc_fac = np.exp(-texp * self.intr)
+        forward = spot / disc_fac * div_fac
+        vol_std = np.fmax(vol * np.sqrt(texp), 1e-32)
+        d = (forward - strike) / vol_std
+        delta = cp_sign * div_fac * ss.norm.cdf(d)
+        return delta
 
     def vega(self, strike, spot, texp=None, vol=None, cp_sign=1):
         ''' 
         <-- PUT your implementation here
         '''
-        return 0
+        div_fac = np.exp(-texp * self.divr)
+        disc_fac = np.exp(-texp * self.intr)
+        forward = spot / disc_fac * div_fac
+        vol_std = np.fmax(vol * np.sqrt(texp), 1e-32)
+        d = (forward - strike) / vol_std
+        vega = div_fac * np.sqrt(texp) * ss.norm.pdf(d)
+        return vega
 
     def gamma(self, strike, spot, texp=None, vol=None, cp_sign=1):
         ''' 
         <-- PUT your implementation here
         '''
-        return 0
+        div_fac = np.exp(-texp * self.divr)
+        disc_fac = np.exp(-texp * self.intr)
+        forward = spot / disc_fac * div_fac
+        vol_std = np.fmax(vol * np.sqrt(texp), 1e-32)
+        d = (forward - strike) / vol_std
+        gamma = div_fac / vol_std * ss.norm.pdf(d)
+        return gamma
 
     def impvol(self, price_in, strike, spot, texp=None, cp_sign=1):
         texp = self.texp if(texp is None) else texp
